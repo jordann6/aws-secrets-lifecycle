@@ -1,0 +1,34 @@
+# Versioned control mapping. The evidence layer reads this file; finding
+# logic never hardcodes control IDs.
+version: 1
+frameworks:
+  hipaa: "HIPAA 164.308(a)(5)(ii)(D)"
+  soc2: "SOC 2 CC6.1"
+  nist: "NIST 800-53 IA-5"
+  cis: "CIS AWS Foundations 1.14"
+
+findings:
+  SECRET_STALE:
+    title: "Secret exceeds maximum age without rotation"
+    severity: HIGH
+    controls: [hipaa, soc2, nist, cis]
+  SECRET_NO_ROTATION_CONFIG:
+    title: "Secret has no rotation configuration"
+    severity: MEDIUM
+    controls: [hipaa, nist, cis]
+  SECRET_ORPHANED:
+    title: "Secret has no observed consumers in the lookback window"
+    severity: LOW
+    controls: [soc2, nist]
+  SECRET_UNIDENTIFIED_CONSUMERS:
+    title: "Secret consumers cannot be fully identified"
+    severity: MEDIUM
+    controls: [soc2, nist]
+  ACCESS_KEY_STALE:
+    title: "IAM access key exceeds maximum age"
+    severity: HIGH
+    controls: [hipaa, soc2, nist, cis]
+
+thresholds:
+  stale_age_days: 90
+  key_stale_age_days: 90
