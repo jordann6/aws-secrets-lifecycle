@@ -54,7 +54,7 @@ with Diagram(
         athena = Athena("secops-wg")
         glue = Glue("secops_cloudtrail")
 
-    bedrock = Bedrock("Claude Opus 5\nrotation runbooks")
+    bedrock = Bedrock("Claude on Bedrock\nrotation runbooks")
 
     with Cluster("Outputs"):
         evidence = S3("evidence bucket\nObject Lock governance")

@@ -13,7 +13,7 @@ variable "prefix" {
 variable "bedrock_model_id" {
   description = "Bedrock model ID used by the analyzer for runbook synthesis"
   type        = string
-  default     = "anthropic.claude-opus-5"
+  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
 
 variable "cloudtrail_lookback_days" {

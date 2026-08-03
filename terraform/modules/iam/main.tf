@@ -265,16 +265,13 @@ resource "aws_iam_role_policy" "analyzer" {
         Resource = "*"
       },
       {
-        Sid      = "BedrockRunbooks"
-        Effect   = "Allow"
-        Action   = "bedrock:InvokeModel"
-        Resource = "arn:aws:bedrock:${var.region}::foundation-model/anthropic.claude-opus-5"
-      },
-      {
-        Sid      = "BedrockMantleRunbooks"
-        Effect   = "Allow"
-        Action   = "bedrock-mantle:CreateInference"
-        Resource = "arn:aws:bedrock-mantle:${var.region}:${var.account_id}:project/default"
+        Sid    = "BedrockRunbooks"
+        Effect = "Allow"
+        Action = "bedrock:InvokeModel"
+        Resource = [
+          "arn:aws:bedrock:*:${var.account_id}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+        ]
       },
       {
         Sid      = "SecurityHubImport"

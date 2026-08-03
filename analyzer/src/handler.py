@@ -122,7 +122,10 @@ def handler(event, context):
         try:
             a["runbook"] = runbook_mod.generate_runbook(a["record"], a["consumer_map"])
         except Exception as exc:
-            log.warning("runbook failed for %s: %s", a["record"]["name"], exc)
+            log.warning("bedrock runbook failed for %s, using rule-based "
+                        "fallback: %s", a["record"]["name"], exc)
+            a["runbook"] = runbook_mod.build_fallback_runbook(
+                a["record"], a["consumer_map"])
 
     for a in analyses:
         findings.extend(evidence_mod.derive_findings(

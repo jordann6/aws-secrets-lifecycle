@@ -20,10 +20,13 @@ produces auditor-ready evidence on the way out.
    which principals actually call GetSecretValue and GetParameter, and how
    often. It combines age, consumer count, consumer identifiability, and
    rotation configuration into a rotation readiness score, then asks
-   Claude Opus 5 on Amazon Bedrock to synthesize an ordered rotation
-   runbook with a rollback path and confidence level for the highest-risk
-   secrets. Output is strict JSON enforced with structured outputs and
-   validated on parse.
+   Claude on Amazon Bedrock (model configurable, Claude Haiku 4.5 by
+   default) to synthesize an ordered rotation runbook with a rollback
+   path and confidence level for the highest-risk secrets. The model is
+   prompted for strict JSON only and the parse is validated with one
+   retry. If Bedrock is unavailable the analyzer degrades to a
+   deterministic rule-based runbook, labeled generator=fallback so
+   dashboards can tell the two apart.
 3. **Compliance evidence layer** maps every finding to HIPAA
    164.308(a)(5)(ii)(D), SOC 2 CC6.1, NIST 800-53 IA-5, and CIS AWS
    Foundations 1.14 from a versioned config file, writes per-scan evidence
@@ -50,8 +53,10 @@ chain scanner to analyzer to reporter, passing the scan ID through.
 ## Setup
 
 Prerequisites: Terraform >= 1.10, Go >= 1.22, Python 3.12+, AWS CLI with
-credentials for the target account, Bedrock model access granted for
-`anthropic.claude-opus-5` in us-east-1.
+credentials for the target account, and Bedrock model access for the
+configured Claude model (submit the Anthropic use case form on the
+Bedrock Model access page once per account). Without model access the
+pipeline still completes using rule-based fallback runbooks.
 
 ```
 make build      compile the scanner, package both Python Lambdas
@@ -94,11 +99,11 @@ Logged by the pipeline and shown on the dashboard per scan:
 | CloudTrail (first copy of management events) | $0.00 |
 | Athena (a few MB scanned per day) | < $0.10 |
 | Security Hub (findings only, no standards, first 10k free) | $0.00 |
-| Bedrock Claude Opus 5 (up to 5 runbooks per scan) | ~$4.50 |
-| **Total** | **~$5.50** |
+| Bedrock Claude Haiku 4.5 (up to 5 runbooks per scan) | ~$0.20 |
+| **Total** | **~$1.15** |
 
-Comfortably under the $15 target. The dominant cost is runbook synthesis,
-bounded by `MAX_RUNBOOKS`.
+Comfortably under the $15 target. Runbook synthesis is bounded by
+`MAX_RUNBOOKS`; swapping in a larger Claude model raises only that line.
 
 ## Repository layout
 
