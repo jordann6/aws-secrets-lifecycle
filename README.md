@@ -1,5 +1,7 @@
 # Secrets Lifecycle and Rotation Readiness Platform
 
+[![ci](https://github.com/jordann6/aws-secrets-lifecycle/actions/workflows/ci.yml/badge.svg)](https://github.com/jordann6/aws-secrets-lifecycle/actions/workflows/ci.yml)
+
 Production-style governance tooling for AWS secrets. AWS Config can already
 tell you a secret is stale. It cannot tell you why nobody rotated it. The
 real reason secrets age out is that no one knows which workloads consume

@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scanner:
+    name: Go scanner vet + tests (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: scanner/go.sum
+
+      - name: go vet
+        run: cd scanner && go vet ./...
+
+      - name: go test
+        run: cd scanner && go test ./... -count=1
+
+  lambdas:
+    name: Lambda lint + SAST + tests (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: pip install --quiet ruff bandit pytest boto3 pyyaml anthropic
+
+      # E9 catches syntax/runtime errors, F is pyflakes (undefined names,
+      # unused imports). Style-only rules are deliberately not gated.
+      - name: ruff (lint)
+        run: ruff check --isolated --select E9,F analyzer/src reporter/src scripts diagram.py
+
+      - name: bandit (SAST, blocking on medium+)
+        run: bandit -r analyzer/src reporter/src scripts -ll
+
+      - name: pytest (analyzer)
+        run: cd analyzer && python -m pytest tests/ -q
+
+      - name: pytest (reporter)
+        run: cd reporter && python -m pytest tests/ -q
+
+  terraform:
+    name: Terraform fmt + validate (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: terraform validate
+        run: |
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate
+
+  secrets:
+    name: Secret scan (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        run: |
+          GITLEAKS_VERSION=8.24.3
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner

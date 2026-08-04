@@ -7,3 +7,9 @@
 *.zip
 __pycache__/
 .pytest_cache/
+
+# Local Python virtualenvs
+.venv/
+**/.venv/
+__pycache__/
+.pytest_cache/
