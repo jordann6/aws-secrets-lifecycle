@@ -13,3 +13,7 @@ output "analyzer_role_arn" {
 output "reporter_role_arn" {
   value = aws_iam_role.reporter.arn
 }
+
+output "executor_role_arn" {
+  value = aws_iam_role.executor.arn
+}

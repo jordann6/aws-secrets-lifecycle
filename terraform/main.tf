@@ -72,3 +72,14 @@ module "lambda_scanner" {
   table_name = module.dynamodb.table_name
   zip_path   = "${path.root}/../scanner/build/scanner.zip"
 }
+
+module "lambda_executor" {
+  source        = "./modules/lambda-executor"
+  prefix        = local.prefix
+  account_id    = local.account_id
+  region        = var.aws_region
+  role_arn      = module.iam.executor_role_arn
+  table_name    = module.dynamodb.table_name
+  zip_path      = "${path.root}/../executor/build/executor.zip"
+  rotation_days = var.rotation_days
+}

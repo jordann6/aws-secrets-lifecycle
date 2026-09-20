@@ -13,3 +13,7 @@ output "dashboard_url" {
 output "evidence_bucket" {
   value = module.s3_evidence.bucket_name
 }
+
+output "executor_function_name" {
+  value = module.lambda_executor.function_name
+}

@@ -292,6 +292,82 @@ resource "aws_iam_role_policy" "analyzer" {
   })
 }
 
+# ---------- rotation executor ----------
+#
+# The only role in this stack WITHOUT the deny on secret material. It is
+# the one component permitted to read and write values, and it is fenced
+# in two ways: the value-mutating actions are scoped by IAM condition to
+# secrets that carry the opt-in tag, and the executor's own approval
+# guardrails re-check that tag plus the analyzer runbook before acting.
+
+resource "aws_iam_role" "executor" {
+  name               = "${var.prefix}-executor-role"
+  assume_role_policy = local.lambda_trust
+}
+
+resource "aws_iam_role_policy" "executor" {
+  name = "${var.prefix}-executor-policy"
+  role = aws_iam_role.executor.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "SecretMetadata"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:ListSecretVersionIds",
+          "secretsmanager:GetRandomPassword"
+        ]
+        Resource = "*"
+      },
+      {
+        # Value read/write and rotation, but only on secrets an operator
+        # tagged for rotation. An untagged secret cannot be touched even
+        # if the executor is invoked against it.
+        Sid    = "RotateOptedInSecrets"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecretVersionStage",
+          "secretsmanager:RotateSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.prefix}-*"
+        Condition = {
+          StringEquals = {
+            "secretsmanager:ResourceTag/secops:rotation-approved" = "true"
+          }
+        }
+      },
+      {
+        Sid    = "RotationKms"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "secretsmanager.${var.region}.amazonaws.com"
+          }
+        }
+      },
+      {
+        Sid    = "RunbookRead"
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query"
+        ]
+        Resource = "arn:aws:dynamodb:${var.region}:${var.account_id}:table/${var.prefix}-*"
+      },
+      local.logs_statement
+    ]
+  })
+}
+
 # ---------- reporter ----------
 
 resource "aws_iam_role" "reporter" {

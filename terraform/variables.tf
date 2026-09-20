@@ -27,3 +27,9 @@ variable "evidence_retention_days" {
   type        = number
   default     = 1
 }
+
+variable "rotation_days" {
+  description = "AutomaticallyAfterDays the executor sets when it starts rotation"
+  type        = number
+  default     = 30
+}

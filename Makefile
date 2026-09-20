@@ -3,7 +3,20 @@ REGION := us-east-1
 TF := terraform -chdir=terraform
 PY := python3
 
-.PHONY: build test deploy seed traffic scan report destroy clean
+.PHONY: build test deploy seed traffic scan report rotate destroy clean
+
+# Dry-run the rotation executor against one secret. Requires SECRET_ARN and
+# SCAN_ID; set APPROVE=1 to actually rotate (secret must carry the
+# secops:rotation-approved=true tag). Example:
+#   make rotate SECRET_ARN=arn:...:secret:secops-demo/token SCAN_ID=2026-...
+rotate:
+	@test -n "$(SECRET_ARN)" || { echo "set SECRET_ARN=..."; exit 1; }
+	@test -n "$(SCAN_ID)" || { echo "set SCAN_ID=..."; exit 1; }
+	aws lambda invoke --function-name secops-executor \
+		--cli-read-timeout 150 --cli-binary-format raw-in-base64-out \
+		--payload '{"secret_arn":"$(SECRET_ARN)","scan_id":"$(SCAN_ID)","approve":true,"dry_run":$(if $(APPROVE),false,true)}' \
+		/tmp/executor-out.json > /dev/null
+	@cat /tmp/executor-out.json | $(PY) -m json.tool
 
 build:
 	cd scanner && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
@@ -18,11 +31,15 @@ build:
 	rm -rf reporter/build && mkdir -p reporter/build/pkg
 	cp reporter/src/*.py reporter/build/pkg/
 	cd reporter/build/pkg && zip -q -r ../reporter.zip .
+	rm -rf executor/build && mkdir -p executor/build/pkg
+	cp executor/src/*.py executor/build/pkg/
+	cd executor/build/pkg && zip -q -r ../executor.zip .
 
 test:
 	cd scanner && go vet ./... && go test ./...
 	cd analyzer && .venv/bin/python -m pytest tests/ -q
 	cd reporter && ../analyzer/.venv/bin/python -m pytest tests/ -q
+	cd executor && ../analyzer/.venv/bin/python -m pytest tests/ -q
 
 deploy: build
 	$(TF) init -input=false
@@ -51,4 +68,4 @@ destroy:
 	$(TF) destroy -input=false -auto-approve
 
 clean:
-	rm -rf scanner/build analyzer/build reporter/build
+	rm -rf scanner/build analyzer/build reporter/build executor/build

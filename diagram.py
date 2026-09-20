@@ -61,6 +61,9 @@ with Diagram(
         hub = SecurityHub("Security Hub\nASFF findings")
         dashboard = S3("dashboard\nstatic site")
 
+    with Cluster("Rotation (opt-in, separate role)"):
+        executor = Lambda("secops-executor\nfour-step rotation")
+
     schedule >> scanner
     scanner >> Edge(label="describe/list") >> [secrets, ssm, iam_keys]
     scanner >> table
@@ -78,3 +81,9 @@ with Diagram(
 
     reporter >> table
     reporter >> dashboard
+
+    # Governance decides, a separately-permissioned executor acts. The
+    # executor is the only role allowed to read and write secret values,
+    # gated by an opt-in tag and the analyzer's approved runbook.
+    table >> Edge(label="approved runbook", style="dashed") >> executor
+    executor >> Edge(label="four-step rotate", style="dashed") >> secrets

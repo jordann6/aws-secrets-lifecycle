@@ -52,6 +52,35 @@ chain scanner to analyzer to reporter, passing the scan ID through.
 - Least-privilege roles per function; the evidence bucket accepts writes
   only from the analyzer role and denies insecure transport.
 
+## Closing the loop: opt-in rotation
+
+The pipeline above is read-only on purpose: it decides *what* should
+rotate and produces the runbook, but never touches a value. A separate
+**executor Lambda** performs the rotation itself, kept apart so the
+governance pipeline keeps its explicit deny on secret material. The
+executor's role is the only one in the stack allowed to read and write
+values, and it is fenced on both sides:
+
+- **IAM**: the value-mutating actions (`GetSecretValue`, `PutSecretValue`,
+  `UpdateSecretVersionStage`, `RotateSecret`) are scoped by condition to
+  secrets carrying `secops:rotation-approved=true`. An untagged secret
+  cannot be touched even by a direct invoke.
+- **Application guardrails** (`executor/src/approval.py`): rotation runs
+  only when the invoke passes `approve=true`, the secret carries the
+  opt-in tag, and the analyzer already produced a runbook whose confidence
+  clears the bar. Low-confidence and rule-based fallback runbooks are
+  refused unless explicitly forced, because those are the secrets whose
+  consumers could not be identified.
+
+When approved, the executor calls `RotateSecret` and then implements the
+standard AWS four-step rotation contract (`createSecret`, `setSecret`,
+`testSecret`, `finishSecret`) with `AWSPENDING`/`AWSCURRENT`/`AWSPREVIOUS`
+staging. The setSecret and testSecret steps are a pluggable `Strategy`; the
+shipped `GenericStrategy` rotates a self-contained secret with no external
+system in the loop, and an RDS or third-party-API strategy is a new
+Strategy rather than a change to the contract. `make rotate` dry-runs the
+decision for a single secret; add `APPROVE=1` to rotate.
+
 ## Setup
 
 Prerequisites: Terraform >= 1.10, Go >= 1.22, Python 3.12+, AWS CLI with
@@ -61,13 +90,14 @@ Bedrock Model access page once per account). Without model access the
 pipeline still completes using rule-based fallback runbooks.
 
 ```
-make build      compile the scanner, package both Python Lambdas
-make test       Go unit tests plus analyzer and reporter pytest suites
+make build      compile the scanner, package the Python Lambdas
+make test       Go unit tests plus analyzer, reporter, executor pytest suites
 make deploy     terraform init and apply all modules
 make seed       create 15 to 20 test secrets, consumers, and traffic
 make traffic    re-invoke consumers to add CloudTrail access events
 make scan       kick off the scanner; the pipeline chains automatically
 make report     re-render the dashboard for the latest scan
+make rotate     dry-run the executor for one secret (APPROVE=1 to rotate)
 make destroy    purge evidence (governance bypass), remove seed, destroy
 ```
 
@@ -111,10 +141,12 @@ Comfortably under the $15 target. Runbook synthesis is bounded by
 
 ```
 terraform/modules/   iam, dynamodb, lambda-scanner, lambda-analyzer,
-                     lambda-reporter, s3-evidence, securityhub, eventbridge
+                     lambda-reporter, lambda-executor, s3-evidence,
+                     securityhub, eventbridge
 scanner/             Go source and unit tests
 analyzer/            Python analyzer, evidence layer, unit tests
 reporter/            Python dashboard renderer, unit tests
+executor/            opt-in rotation executor, guardrails, unit tests
 config/              versioned control mappings (YAML)
 scripts/             seed.py, purge_evidence.py
 ```
