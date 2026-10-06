@@ -16,6 +16,7 @@ locals {
     Effect = "Deny"
     Action = [
       "secretsmanager:GetSecretValue",
+      "secretsmanager:BatchGetSecretValue",
       "ssm:GetParameter",
       "ssm:GetParameters",
       "ssm:GetParametersByPath"
@@ -103,10 +104,13 @@ resource "aws_iam_role_policy" "scanner" {
         Resource = "arn:aws:dynamodb:${var.region}:${var.account_id}:table/${var.prefix}-*"
       },
       {
-        Sid      = "AssumeScanTargets"
-        Effect   = "Allow"
-        Action   = "sts:AssumeRole"
-        Resource = "arn:aws:iam::*:role/${var.prefix}-scan-target-role"
+        Sid    = "AssumeScanTargets"
+        Effect = "Allow"
+        Action = "sts:AssumeRole"
+        Resource = concat(
+          ["arn:aws:iam::${var.account_id}:role/${var.prefix}-scan-target-role"],
+          sort(tolist(var.scan_target_role_arns))
+        )
       },
       {
         Sid      = "ChainAnalyzer"

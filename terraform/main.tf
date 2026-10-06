@@ -12,10 +12,11 @@ module "dynamodb" {
 }
 
 module "iam" {
-  source     = "./modules/iam"
-  prefix     = local.prefix
-  account_id = local.account_id
-  region     = var.aws_region
+  source                = "./modules/iam"
+  prefix                = local.prefix
+  account_id            = local.account_id
+  region                = var.aws_region
+  scan_target_role_arns = var.scan_target_role_arns
 }
 
 module "s3_evidence" {
@@ -66,11 +67,14 @@ module "lambda_reporter" {
 }
 
 module "lambda_scanner" {
-  source     = "./modules/lambda-scanner"
-  prefix     = local.prefix
-  role_arn   = module.iam.scanner_role_arn
-  table_name = module.dynamodb.table_name
-  zip_path   = "${path.root}/../scanner/build/scanner.zip"
+  source                = "./modules/lambda-scanner"
+  prefix                = local.prefix
+  role_arn              = module.iam.scanner_role_arn
+  table_name            = module.dynamodb.table_name
+  zip_path              = "${path.root}/../scanner/build/scanner.zip"
+  scan_target_role_arns = join(",", sort(tolist(var.scan_target_role_arns)))
+  scan_regions          = join(",", sort(tolist(var.scan_regions)))
+  secret_max_age_days   = var.secret_max_age_days
 }
 
 module "lambda_executor" {

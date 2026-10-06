@@ -23,3 +23,8 @@ variable "scan_regions" {
 variable "zip_path" {
   type = string
 }
+
+variable "secret_max_age_days" {
+  type    = number
+  default = 90
+}

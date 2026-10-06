@@ -13,3 +13,12 @@ __pycache__/
 **/.venv/
 __pycache__/
 .pytest_cache/
+
+# local secrets: never commit
+.env
+.env.*
+!.env.example
+*.tfvars.json
+tfplan
+*.tfplan
+plan.json

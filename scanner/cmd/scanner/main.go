@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,6 +83,14 @@ func buildTargets(ctx context.Context) ([]target, error) {
 
 func runScan(ctx context.Context) (Result, error) {
 	started := time.Now()
+	maxAgeDays := 90
+	if value := os.Getenv("SECRET_MAX_AGE_DAYS"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil || parsed < 1 || parsed > 365 {
+			return Result{}, fmt.Errorf("SECRET_MAX_AGE_DAYS must be between 1 and 365")
+		}
+		maxAgeDays = parsed
+	}
 	scanID := started.UTC().Format("20060102T150405Z")
 	table := os.Getenv("INVENTORY_TABLE")
 	if table == "" {
@@ -123,6 +132,14 @@ func runScan(ctx context.Context) (Result, error) {
 	base, _ := config.LoadDefaultConfig(ctx)
 	if err := store.WriteRecords(ctx, dynamodb.NewFromConfig(base), table, records); err != nil {
 		return Result{}, err
+	}
+	if name := os.Getenv("AWS_LAMBDA_FUNCTION_NAME"); name != "" {
+		metric, err := secretAgeMetric(records, time.Now(), maxAgeDays, name)
+		if err != nil {
+			return Result{}, err
+		}
+		// EMF must be a plain JSON log event without the log package's prefix.
+		fmt.Println(string(metric))
 	}
 
 	elapsed := time.Since(started).Seconds()

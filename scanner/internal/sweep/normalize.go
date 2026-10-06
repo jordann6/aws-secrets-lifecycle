@@ -14,7 +14,13 @@ func FinishRecord(r *Record, scanID string, now time.Time) {
 	r.PK = r.ARN
 	r.SK = "INVENTORY#" + scanID
 
-	age := int64(now.Sub(r.CreatedAt).Hours() / 24)
+	updated := r.CreatedAt
+	if r.CurrentVersionCreatedAt != nil {
+		updated = *r.CurrentVersionCreatedAt
+	} else if r.LastRotatedAt != nil {
+		updated = *r.LastRotatedAt
+	}
+	age := int64(now.Sub(updated).Hours() / 24)
 	if v, ok := r.Tags[simulatedAgeTag]; ok {
 		if days, err := strconv.ParseInt(v, 10, 64); err == nil {
 			age = days
