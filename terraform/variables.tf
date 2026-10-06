@@ -67,3 +67,21 @@ variable "secret_alert_email" {
   type        = string
   default     = null
 }
+
+variable "deploy_role_arn" {
+  description = "Optional role to deploy through, e.g. the landing zone security account's OrganizationAccountAccessRole. Null uses the caller's account."
+  type        = string
+  default     = null
+}
+
+variable "manage_securityhub" {
+  description = "Enable Security Hub in the home account. Set false where it is already enabled (a landing zone delegated admin)."
+  type        = bool
+  default     = true
+}
+
+variable "public_dashboard" {
+  description = "Serve the dashboard as a public-read S3 website. Only for seeded demo data; real inventory stays private."
+  type        = bool
+  default     = false
+}

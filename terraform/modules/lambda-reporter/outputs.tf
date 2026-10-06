@@ -7,5 +7,5 @@ output "function_arn" {
 }
 
 output "dashboard_url" {
-  value = "http://${aws_s3_bucket.dashboard.bucket}.s3-website-us-east-1.amazonaws.com/"
+  value = var.public ? "http://${aws_s3_bucket.dashboard.bucket}.s3-website-us-east-1.amazonaws.com/" : "s3://${aws_s3_bucket.dashboard.bucket}/index.html"
 }

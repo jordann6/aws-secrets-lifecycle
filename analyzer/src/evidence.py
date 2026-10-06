@@ -67,7 +67,8 @@ def write_evidence_artifact(s3, bucket, scan_id, findings, metrics):
         "metrics": metrics,
         "findings": findings,
     }, indent=2, default=str)
-    s3.put_object(Bucket=bucket, Key=key, Body=body.encode())
+    s3.put_object(Bucket=bucket, Key=key, Body=body.encode(),
+                  ServerSideEncryption="AES256")
     return key
 
 

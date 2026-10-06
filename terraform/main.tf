@@ -29,6 +29,7 @@ module "s3_evidence" {
 
 module "securityhub" {
   source = "./modules/securityhub"
+  count  = var.manage_securityhub ? 1 : 0
 }
 
 module "lambda_analyzer" {
@@ -64,6 +65,7 @@ module "lambda_reporter" {
   role_arn   = module.iam.reporter_role_arn
   table_name = module.dynamodb.table_name
   zip_path   = "${path.root}/../reporter/build/reporter.zip"
+  public     = var.public_dashboard
 }
 
 module "lambda_scanner" {

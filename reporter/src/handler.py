@@ -52,7 +52,8 @@ def handler(event, context):
     page = render.render(scan_id, metrics, analyses)
     for key in (f"scans/{scan_id}.html", "index.html"):
         s3.put_object(Bucket=DASHBOARD_BUCKET, Key=key, Body=page.encode(),
-                      ContentType="text/html; charset=utf-8")
+                      ContentType="text/html; charset=utf-8",
+                      ServerSideEncryption="AES256")
 
     url = f"http://{DASHBOARD_BUCKET}.s3-website-us-east-1.amazonaws.com/"
     log.info("dashboard written for %s: %s", scan_id, url)

@@ -17,3 +17,8 @@ variable "table_name" {
 variable "zip_path" {
   type = string
 }
+
+variable "public" {
+  type    = bool
+  default = false
+}
