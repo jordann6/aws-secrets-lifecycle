@@ -52,6 +52,21 @@ chain scanner to analyzer to reporter, passing the scan ID through.
 - Least-privilege roles per function; the evidence bucket accepts writes
   only from the analyzer role and denies insecure transport.
 
+## Landing zone integration and age alerts
+
+Set `scan_target_role_arns` to the exact metadata-role outputs from the landing
+zone's `secrets/` root. The scanner sweeps those accounts in `scan_regions` plus
+its home account. Its IAM policy permits AssumeRole only for the configured
+targets and the existing home-account metadata role.
+
+`secret_max_age_days` defaults to 90. The scanner reads AWSCURRENT version
+metadata, so renewal resets credential age without resetting the container's
+creation date. Complete scans emit age and completion metrics to CloudWatch.
+The age alarm includes overdue credentials even when rotation is enabled,
+empty secrets, and invalid version timestamps. A second alarm detects missing
+complete scans. Both publish to an encrypted SNS topic; optionally set
+`secret_alert_email` and confirm the subscription for email delivery.
+
 ## Closing the loop: opt-in rotation
 
 The pipeline above is read-only on purpose: it decides *what* should

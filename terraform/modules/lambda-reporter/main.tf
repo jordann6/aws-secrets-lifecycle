@@ -1,5 +1,6 @@
-# Dashboard bucket: S3 static website hosting with a public-read bucket
-# policy only, per the design constraint. No CloudFront, no ACLs.
+# Dashboard bucket. Private by default: the page lists secret names and the
+# principals that read them. var.public turns on S3 website hosting with a
+# public-read policy for seeded demo data only. No CloudFront, no ACLs.
 
 resource "aws_s3_bucket" "dashboard" {
   bucket        = "${var.prefix}-dashboard-${var.account_id}"
@@ -7,6 +8,7 @@ resource "aws_s3_bucket" "dashboard" {
 }
 
 resource "aws_s3_bucket_website_configuration" "dashboard" {
+  count  = var.public ? 1 : 0
   bucket = aws_s3_bucket.dashboard.id
   index_document {
     suffix = "index.html"
@@ -17,11 +19,12 @@ resource "aws_s3_bucket_public_access_block" "dashboard" {
   bucket                  = aws_s3_bucket.dashboard.id
   block_public_acls       = true
   ignore_public_acls      = true
-  block_public_policy     = false
-  restrict_public_buckets = false
+  block_public_policy     = !var.public
+  restrict_public_buckets = !var.public
 }
 
 resource "aws_s3_bucket_policy" "dashboard" {
+  count  = var.public ? 1 : 0
   bucket = aws_s3_bucket.dashboard.id
   policy = jsonencode({
     Version = "2012-10-17"

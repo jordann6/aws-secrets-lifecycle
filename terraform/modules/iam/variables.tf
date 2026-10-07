@@ -9,3 +9,8 @@ variable "account_id" {
 variable "region" {
   type = string
 }
+
+variable "scan_target_role_arns" {
+  type    = set(string)
+  default = []
+}

@@ -14,6 +14,7 @@ resource "aws_lambda_function" "scanner" {
       INVENTORY_TABLE       = var.table_name
       SCAN_REGIONS          = var.scan_regions
       SCAN_TARGET_ROLE_ARNS = var.scan_target_role_arns
+      SECRET_MAX_AGE_DAYS   = tostring(var.secret_max_age_days)
     }
   }
 }
